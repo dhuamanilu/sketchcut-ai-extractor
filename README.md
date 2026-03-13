@@ -58,8 +58,19 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 Then, open your browser and navigate to `http://localhost:8000`.
 
-### Easy Startup (Windows)
-A `Iniciar_Extractor.bat` script is included for Windows users without CLI experience. Simply double-click the `.bat` file to automatically spin up the background virtual environment and open the frontend in your default browser.
+### Production Deployment (VPS / Amazon EC2)
+
+The most secure and robust way to deploy this application on a Linux server is using **Docker**:
+
+1. Ensure `docker` and `docker-compose` are installed on your VPS.
+2. Clone this repository on the server and `cd api`.
+3. Create your `.env` file with the `GEMINI_API_KEY`.
+4. Run the container in the background:
+   ```bash
+   docker-compose up -d
+   ```
+5. The application will be live at `http://YOUR_SERVER_IP:8000`. 
+   *(Note: Remember to configure a reverse proxy like Nginx or Traefik for SSL/HTTPS in production).*
 
 ## How it works
 

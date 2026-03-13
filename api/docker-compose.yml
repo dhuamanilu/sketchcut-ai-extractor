@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  sct-extractor:
+    build: .
+    container_name: sct-extractor-api
+    ports:
+      - "8000:8000"
+    restart: always
+    env_file:
+      - .env
