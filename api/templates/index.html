@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCT Extractor - Sketch Cut Pro</title>
+    <!-- Tailwind CSS for sleek styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons for modern UI -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            transition: opacity 0.2s;
+        }
+
+        .btn-gradient:hover {
+            opacity: 0.9;
+        }
+
+        /* Spinner animation */
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+
+    <header class="w-full max-w-4xl mb-8 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl btn-gradient flex items-center justify-center shadow-lg">
+                <i class="ph ph-scan text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">SCT Extractor</h1>
+                <p class="text-xs text-slate-400">Sketch Cut Pro AI Assistant</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Left Column: Upload -->
+        <div class="glass-panel rounded-2xl p-6 flex flex-col shadow-xl">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2"><i class="ph ph-camera text-blue-400"></i>
+                Captura o Fotos</h2>
+            <p class="text-sm text-slate-400 mb-6">Sube una foto de la nota de medidas. La Inteligencia Artificial
+                extraerá automáticamente el largo, ancho y la cantidad.</p>
+
+            <label id="drop-zone"
+                class="flex-1 min-h-[250px] border-2 border-dashed border-slate-600 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-slate-800/50 transition-colors relative overflow-hidden group">
+                <input type="file" id="file-input" class="hidden" accept="image/*" capture="environment" multiple>
+
+                <!-- Default State -->
+                <div id="upload-prompt" class="flex flex-col items-center text-center p-6 delay-100 transition-opacity">
+                    <div
+                        class="h-16 w-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-blue-400 group-hover:scale-110 transition-transform">
+                        <i class="ph ph-upload-simple text-3xl"></i>
+                    </div>
+                    <span class="font-medium">Toca para abrir cámara/galería</span>
+                    <span class="text-xs text-slate-500 mt-2">Formatos soportados: JPG, PNG, WEBP</span>
+                </div>
+
+                <div id="image-preview"
+                    class="absolute inset-0 w-full h-full object-cover hidden bg-slate-800 flex items-center justify-center font-bold text-lg text-slate-300 z-[5]">
+                </div>
+
+                <!-- Loading Overlay -->
+                <div id="loading-overlay"
+                    class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm hidden flex flex-col items-center justify-center z-10">
+                    <i class="ph ph-spinner text-4xl text-blue-500 spinner mb-3"></i>
+                    <span class="font-medium animate-pulse text-sm">Analizando medidas con IA...</span>
+                </div>
+            </label>
+        </div>
+
+        <!-- Right Column: Results & Export -->
+        <div class="glass-panel rounded-2xl p-6 flex flex-col shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold flex items-center gap-2"><i class="ph ph-table text-purple-400"></i>
+                    Piezas Extraídas</h2>
+                <span id="part-count" class="bg-slate-800 text-slate-300 text-xs px-2 py-1 rounded-md hidden">0
+                    piezas</span>
+            </div>
+
+            <!-- Empty State -->
+            <div id="results-empty"
+                class="flex-1 flex flex-col items-center justify-center text-slate-500 min-h-[200px]">
+                <i class="ph ph-file-dashed text-4xl mb-3 opacity-50"></i>
+                <p class="text-sm text-center">Sube una imagen para ver<br>las medidas extraídas aquí.</p>
+            </div>
+
+            <!-- Table Container -->
+            <div id="results-container" class="flex-1 hidden flex-col">
+                <div class="overflow-y-auto max-h-[280px] rounded-lg border border-slate-700 custom-scrollbar pr-1">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs uppercase bg-slate-800 text-slate-400 sticky top-0">
+                            <tr>
+                                <th class="px-4 py-3 rounded-tl-lg">Largo (mm)</th>
+                                <th class="px-4 py-3">Ancho (mm)</th>
+                                <th class="px-4 py-3 rounded-tr-lg">Cant.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="parts-table-body" class="divide-y divide-slate-700/50">
+                            <!-- Rows injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-6">
+                    <button id="btn-export" disabled
+                        class="w-full btn-gradient font-medium py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="ph ph-download-simple text-xl"></i>
+                        Descargar Archivo .SCT
+                    </button>
+                    <p class="text-center text-xs text-slate-500 mt-3">Este archivo se abrirá directamente en Sketch Cut
+                        Pro</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const uploadPrompt = document.getElementById('upload-prompt');
+        const imagePreview = document.getElementById('image-preview');
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        const resultsEmpty = document.getElementById('results-empty');
+        const resultsContainer = document.getElementById('results-container');
+        const tableBody = document.getElementById('parts-table-body');
+        const partCount = document.getElementById('part-count');
+        const btnExport = document.getElementById('btn-export');
+
+        let currentPartsData = [];
+
+        // Handle Image Selection
+        fileInput.addEventListener('change', async (e) => {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+
+            // Show Preview state
+            imagePreview.textContent = files.length === 1 ? '1 Imagen Seleccionada' : `${files.length} Imágenes Seleccionadas`;
+            imagePreview.classList.remove('hidden');
+            uploadPrompt.classList.add('hidden');
+
+            // Upload and Process
+            await processImages(files);
+        });
+
+        async function processImages(files) {
+            // UI Loading state
+            loadingOverlay.classList.remove('hidden');
+            btnExport.disabled = true;
+
+            // Convert FileList to array and sort alphabetically to ensure deterministic order
+            const filesArray = Array.from(files).sort((a, b) => a.name.localeCompare(b.name));
+
+            const formData = new FormData();
+            for (let i = 0; i < filesArray.length; i++) {
+                formData.append('files', filesArray[i]);
+            }
+
+            try {
+                // Call our FastAPI backend /api/extract
+                const response = await fetch('/api/extract', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(errText);
+                }
+
+                const data = await response.json();
+                currentPartsData = data.parts;
+
+                renderTable(currentPartsData);
+
+            } catch (error) {
+                console.error(error);
+                alert("Hubo un error al procesar las imágenes. Por favor, intenta de nuevo.");
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        function renderTable(parts) {
+            resultsEmpty.classList.add('hidden');
+            resultsContainer.classList.remove('hidden');
+            resultsContainer.classList.add('flex');
+
+            partCount.textContent = `${parts.length} piezas diferentes`;
+            partCount.classList.remove('hidden');
+
+            tableBody.innerHTML = '';
+
+            parts.forEach((part, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/50 transition-colors';
+                // Editable inputs to allow user corrections
+                tr.innerHTML = `
+                    <td class="px-4 py-2">
+                        <input type="number" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 focus:outline-none focus:border-blue-500" value="${part.length}" data-index="${index}" data-field="length">
+                    </td>
+                    <td class="px-4 py-2">
+                        <input type="number" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 focus:outline-none focus:border-blue-500" value="${part.width}" data-index="${index}" data-field="width">
+                    </td>
+                    <td class="px-4 py-2">
+                        <input type="number" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 focus:outline-none focus:border-blue-500" value="${part.quantity}" data-index="${index}" data-field="quantity">
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            // Listen to inputs to update currentPartsData
+            tableBody.querySelectorAll('input').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const idx = parseInt(e.target.dataset.index);
+                    const field = e.target.dataset.field;
+                    currentPartsData[idx][field] = parseInt(e.target.value) || 0;
+                });
+            });
+
+            btnExport.disabled = parts.length === 0;
+        }
+
+        // Export functionality
+        btnExport.addEventListener('click', async () => {
+            if (currentPartsData.length === 0) return;
+
+            try {
+                const response = await fetch('/api/generate-sct', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ parts: currentPartsData })
+                });
+
+                if (!response.ok) throw new Error('Error al generar SCT');
+
+                // Get filename from header if present
+                const disposition = response.headers.get('Content-Disposition');
+                let filename = `Cortes_IA_${new Date().getTime()}.sct`;
+                if (disposition && disposition.indexOf('attachment') !== -1) {
+                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                    const matches = filenameRegex.exec(disposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+            } catch (error) {
+                console.error(error);
+                alert("Error al descargar el archivo");
+            }
+        });
+    </script>
+</body>
+
+</html>
