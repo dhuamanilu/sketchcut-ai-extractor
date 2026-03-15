@@ -30,6 +30,44 @@ def test_sct_generation_structure():
     assert any("1200X600X1" in line for line in lines)
 
 
+def test_generate_sct_banding_and_grooves():
+    """Test that banding and grooves are routed to the correct physical dimension."""
+    parts = [
+        Part(
+            length=200, width=500, quantity=1,
+            banding_long="1_grueso", banding_short="none",
+            groove_long="1", groove_short="none"
+        ),
+        Part(
+            length=800, width=300, quantity=1,
+            banding_long="none", banding_short="1_delgado",
+            groove_long="none", groove_short="2"
+        ),
+        Part(
+            length=600, width=600, quantity=1,
+            banding_long="mixto", banding_short="mixto",
+            groove_long="1", groove_short="none"
+        )
+    ]
+    sct_content = generate_sct(parts)
+    lines = sct_content.strip().split('\n')
+    
+    # physical Largo for part 1 is 500 (Width axis), Corto is 200 (Length axis)
+    # banding_long is "1_grueso" (val 1) and groove_long is "1" (val 1)
+    # Target string is Length_c X Width_c _ Length_g X Width_g -> 0X1_0X1
+    assert any("0X1_0X1" in line for line in lines)
+    
+    # physical Largo for part 2 is 800 (Length axis), Corto is 300 (Width axis)
+    # banding_short is "1_delgado" (val 3) and groove_short is "2" (val 2)
+    # Target string is Length_c X Width_c _ Length_g X Width_g -> 0X3_0X2
+    assert any("0X3_0X2" in line for line in lines)
+    
+    # part 3 is a perfect square, "mixto" (val 5) for both
+    # groove_long is "1" (val 1)
+    # Target string -> 5X5_1X0
+    assert any("5X5_1X0" in line for line in lines)
+
+
 # --- Endpoint Integration Tests for main.py ---
 
 def test_read_root():

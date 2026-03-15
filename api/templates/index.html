@@ -50,7 +50,7 @@
 
 <body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
 
-    <header class="w-full max-w-4xl mb-8 flex items-center justify-between">
+    <header class="w-full max-w-7xl mx-auto mb-8 flex items-center justify-between">
         <div class="flex items-center gap-3">
             <div class="h-10 w-10 rounded-xl btn-gradient flex items-center justify-center shadow-lg">
                 <i class="ph ph-scan text-2xl"></i>
@@ -62,10 +62,10 @@
         </div>
     </header>
 
-    <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
+    <main class="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         <!-- Left Column: Upload -->
-        <div class="glass-panel rounded-2xl p-6 flex flex-col shadow-xl">
+        <div class="glass-panel rounded-2xl p-6 flex flex-col shadow-xl lg:col-span-1">
             <h2 class="text-lg font-semibold mb-4 flex items-center gap-2"><i class="ph ph-camera text-blue-400"></i>
                 Captura o Fotos</h2>
             <p class="text-sm text-slate-400 mb-4 leading-snug">Añade fotos de notas. <strong>Ordena la lista</strong> usando las flechas. La IA extraerá piezas en ese orden exacto.</p>
@@ -101,7 +101,7 @@
         </div>
 
         <!-- Right Column: Results & Export -->
-        <div class="glass-panel rounded-2xl p-6 flex flex-col shadow-xl">
+        <div class="glass-panel rounded-2xl p-6 flex flex-col shadow-xl lg:col-span-2">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold flex items-center gap-2"><i class="ph ph-table text-purple-400"></i>
                     Piezas Extraídas</h2>
@@ -124,6 +124,10 @@
                             <tr>
                                 <th class="px-4 py-3 rounded-tl-lg">Largo (mm)</th>
                                 <th class="px-4 py-3">Ancho (mm)</th>
+                                <th class="px-4 py-3" title="Canto en dimensión físicamente mayor">Canto L.</th>
+                                <th class="px-4 py-3" title="Canto en dimensión físicamente menor">Canto C.</th>
+                                <th class="px-4 py-3" title="Surco en dimensión físicamente mayor">Surco L.</th>
+                                <th class="px-4 py-3" title="Surco en dimensión físicamente menor">Surco C.</th>
                                 <th class="px-4 py-3 rounded-tr-lg">Cant.</th>
                             </tr>
                         </thead>
@@ -248,6 +252,10 @@
                 animation: 150,
                 handle: '.drag-handle',
                 ghostClass: 'bg-slate-700',
+                scroll: true,             // Enable auto-scrolling
+                scrollSensitivity: 100,    // Distance in pixels from the edge to trigger scrolling
+                scrollSpeed: 25,          // Scrolling speed
+                bubbleScroll: true,       // Apply scroll to all parent scrolling elements
                 onEnd: function (evt) {
                     // Update the selectedFiles array to match the new DOM order
                     const newOrderIds = Array.from(imageQueue.children).map(el => el.dataset.id);
@@ -401,6 +409,40 @@
                     <td class="px-4 py-2">
                         <input type="number" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 focus:outline-none focus:border-blue-500" value="${part.width}" data-index="${index}" data-field="width">
                     </td>
+                    <td class="px-2 py-2">
+                        <select class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs focus:outline-none focus:border-blue-500" data-index="${index}" data-field="banding_long">
+                            <option value="none" ${part.banding_long === 'none' ? 'selected' : ''}>Ninguno</option>
+                            <option value="1_grueso" ${part.banding_long === '1_grueso' ? 'selected' : ''}>1 Grueso</option>
+                            <option value="2_grueso" ${part.banding_long === '2_grueso' ? 'selected' : ''}>2 Grueso</option>
+                            <option value="1_delgado" ${part.banding_long === '1_delgado' ? 'selected' : ''}>1 Delgado</option>
+                            <option value="2_delgado" ${part.banding_long === '2_delgado' ? 'selected' : ''}>2 Delgado</option>
+                            <option value="mixto" ${part.banding_long === 'mixto' ? 'selected' : ''}>1Gr+1Del</option>
+                        </select>
+                    </td>
+                    <td class="px-2 py-2">
+                        <select class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs focus:outline-none focus:border-blue-500" data-index="${index}" data-field="banding_short">
+                            <option value="none" ${part.banding_short === 'none' ? 'selected' : ''}>Ninguno</option>
+                            <option value="1_grueso" ${part.banding_short === '1_grueso' ? 'selected' : ''}>1 Grueso</option>
+                            <option value="2_grueso" ${part.banding_short === '2_grueso' ? 'selected' : ''}>2 Grueso</option>
+                            <option value="1_delgado" ${part.banding_short === '1_delgado' ? 'selected' : ''}>1 Delgado</option>
+                            <option value="2_delgado" ${part.banding_short === '2_delgado' ? 'selected' : ''}>2 Delgado</option>
+                            <option value="mixto" ${part.banding_short === 'mixto' ? 'selected' : ''}>1Gr+1Del</option>
+                        </select>
+                    </td>
+                    <td class="px-2 py-2">
+                        <select class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs focus:outline-none focus:border-blue-500" data-index="${index}" data-field="groove_long">
+                            <option value="none" ${part.groove_long === 'none' ? 'selected' : ''}>0</option>
+                            <option value="1" ${part.groove_long === '1' ? 'selected' : ''}>1 Lado</option>
+                            <option value="2" ${part.groove_long === '2' ? 'selected' : ''}>2 Lados</option>
+                        </select>
+                    </td>
+                    <td class="px-2 py-2">
+                        <select class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs focus:outline-none focus:border-blue-500" data-index="${index}" data-field="groove_short">
+                            <option value="none" ${part.groove_short === 'none' ? 'selected' : ''}>0</option>
+                            <option value="1" ${part.groove_short === '1' ? 'selected' : ''}>1 Lado</option>
+                            <option value="2" ${part.groove_short === '2' ? 'selected' : ''}>2 Lados</option>
+                        </select>
+                    </td>
                     <td class="px-4 py-2">
                         <input type="number" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 focus:outline-none focus:border-blue-500" value="${part.quantity}" data-index="${index}" data-field="quantity">
                     </td>
@@ -409,11 +451,11 @@
             });
 
             // Listen to inputs to update currentPartsData
-            tableBody.querySelectorAll('input').forEach(input => {
+            tableBody.querySelectorAll('input, select').forEach(input => {
                 input.addEventListener('change', (e) => {
                     const idx = parseInt(e.target.dataset.index);
                     const field = e.target.dataset.field;
-                    currentPartsData[idx][field] = parseInt(e.target.value) || 0;
+                    currentPartsData[idx][field] = e.target.tagName === 'SELECT' ? e.target.value : (parseInt(e.target.value) || 0);
                 });
             });
 
