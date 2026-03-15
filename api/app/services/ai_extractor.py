@@ -3,14 +3,15 @@ import json
 from tempfile import NamedTemporaryFile
 from typing import List
 from fastapi import UploadFile
+import pandas as pd
 import google.generativeai as genai
 
 from app.models.schemas import Part
 from app.core.config import settings
 
 prompt = """
-You are an expert at interpreting handwritten or printed notes for melamine wood cutting.
-Analyze the provided image(s) and extract the combined list of pieces to be cut.
+You are an expert at interpreting handwritten or printed notes, as well as unstructured spreadsheet data arrays, for melamine wood cutting.
+Analyze the provided images AND/OR the provided raw spreadsheet text string and extract the combined list of pieces to be cut.
 Rules:
 1. Each piece must have a 'length', 'width', and 'quantity'. YOU MUST EXTRACT LENGTH AND WIDTH IN THE EXACT ORDER THEY ARE WRITTEN (e.g., if note says 200x500, length=200, width=500. DO NOT reorder them by size!).
 2. EXTREMELY CRITICAL CONVERSION RULE: Sketch Cut Pro REQUIRES ALL measurements in pure MILLIMETERS (mm), but notes are very often in Centimeters (cm).
@@ -36,21 +37,48 @@ Rules:
 async def extract_parts_from_images(files: List[UploadFile]) -> List[Part]:
     temp_paths = []
     uploaded_files = []
+    spreadsheet_texts = []
     
     try:
         # Save temp files and upload to Gemini
         for file in files:
-            with NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
-                content = await file.read()
-                temp.write(content)
-                temp_paths.append(temp.name)
+            extension = os.path.splitext(file.filename)[1].lower() if file.filename else ""
             
-            myfile = genai.upload_file(temp_paths[-1])
-            uploaded_files.append(myfile)
+            # Read into memory
+            content = await file.read()
+            
+            if extension in ['.xlsx', '.xls', '.csv']:
+                # Handle Spreadsheets
+                with NamedTemporaryFile(delete=False, suffix=extension) as temp:
+                    temp.write(content)
+                    temp_paths.append(temp.name)
+                
+                # Parse with Pandas
+                if extension == '.csv':
+                    df = pd.read_csv(temp_paths[-1])
+                else:
+                    df = pd.read_excel(temp_paths[-1])
+                
+                # Convert unstructured dataframe to pure text representation
+                spreadsheet_texts.append(f"SPREADSHEET CONTENT DUMP ({file.filename}):\n{df.to_string()}\n---")
+            
+            else:
+                # Handle Images
+                suffix = extension if extension else ".jpg"
+                with NamedTemporaryFile(delete=False, suffix=suffix) as temp:
+                    temp.write(content)
+                    temp_paths.append(temp.name)
+                
+                myfile = genai.upload_file(temp_paths[-1])
+                uploaded_files.append(myfile)
             
         model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # Build payload combining images, spreadsheet strings, and prompt
+        payload = uploaded_files + spreadsheet_texts + [prompt]
+        
         response = model.generate_content(
-            uploaded_files + [prompt],
+            payload,
             generation_config=genai.types.GenerationConfig(
                 response_mime_type="application/json",
                 temperature=0.1
