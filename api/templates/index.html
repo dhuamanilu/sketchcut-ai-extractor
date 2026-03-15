@@ -9,6 +9,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Phosphor Icons for modern UI -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- SortableJS for native Drag and Drop experience -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -66,34 +68,36 @@
         <div class="glass-panel rounded-2xl p-6 flex flex-col shadow-xl">
             <h2 class="text-lg font-semibold mb-4 flex items-center gap-2"><i class="ph ph-camera text-blue-400"></i>
                 Captura o Fotos</h2>
-            <p class="text-sm text-slate-400 mb-6">Sube una foto de la nota de medidas. La Inteligencia Artificial
-                extraerá automáticamente el largo, ancho y la cantidad.</p>
+            <p class="text-sm text-slate-400 mb-4 leading-snug">Añade fotos de notas. <strong>Ordena la lista</strong> usando las flechas. La IA extraerá piezas en ese orden exacto.</p>
 
             <label id="drop-zone"
-                class="flex-1 min-h-[250px] border-2 border-dashed border-slate-600 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-slate-800/50 transition-colors relative overflow-hidden group">
+                class="min-h-[120px] mb-4 border-2 border-dashed border-slate-600 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-slate-800/50 transition-colors">
                 <input type="file" id="file-input" class="hidden" accept="image/*" capture="environment" multiple>
-
-                <!-- Default State -->
-                <div id="upload-prompt" class="flex flex-col items-center text-center p-6 delay-100 transition-opacity">
-                    <div
-                        class="h-16 w-16 rounded-full bg-slate-800 flex items-center justify-center mb-4 text-blue-400 group-hover:scale-110 transition-transform">
-                        <i class="ph ph-upload-simple text-3xl"></i>
+                
+                <div class="flex flex-col items-center text-center p-4">
+                    <div class="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center mb-2 text-blue-400 border border-slate-700">
+                        <i class="ph ph-plus text-xl"></i>
                     </div>
-                    <span class="font-medium">Toca para abrir cámara/galería</span>
-                    <span class="text-xs text-slate-500 mt-2">Formatos soportados: JPG, PNG, WEBP</span>
-                </div>
-
-                <div id="image-preview"
-                    class="absolute inset-0 w-full h-full object-cover hidden bg-slate-800 flex items-center justify-center font-bold text-lg text-slate-300 z-[5]">
-                </div>
-
-                <!-- Loading Overlay -->
-                <div id="loading-overlay"
-                    class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm hidden flex flex-col items-center justify-center z-10">
-                    <i class="ph ph-spinner text-4xl text-blue-500 spinner mb-3"></i>
-                    <span class="font-medium animate-pulse text-sm">Analizando medidas con IA...</span>
+                    <span class="font-medium text-sm">Añadir foto(s) a la cola</span>
                 </div>
             </label>
+
+            <!-- Queue Area -->
+            <div id="queue-area" class="flex-1 flex flex-col hidden overflow-hidden">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cola de Procesamiento</h3>
+                    <span id="queue-count" class="text-xs bg-slate-800 px-2 py-1 rounded text-slate-300">0 fotos</span>
+                </div>
+                
+                <div id="image-queue" class="flex-1 overflow-y-auto min-h-[140px] max-h-[220px] flex flex-col gap-2 custom-scrollbar pr-2 mb-4">
+                    <!-- Populated by JS -->
+                </div>
+                
+                <button id="btn-process" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-colors">
+                    <i class="ph ph-magic-wand text-xl"></i>
+                    Extraer en este orden
+                </button>
+            </div>
         </div>
 
         <!-- Right Column: Results & Export -->
@@ -142,11 +146,28 @@
         </div>
     </main>
 
+    <!-- Global Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm hidden flex-col items-center justify-center z-[100]">
+        <i class="ph ph-spinner text-5xl text-blue-500 spinner mb-4"></i>
+        <span class="font-medium animate-pulse text-lg text-center px-4">Procesando imágenes con IA...<br><span class="text-sm font-normal text-slate-400 mt-2 block">Por favor, no cierres esta ventana.</span></span>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div id="image-modal" class="fixed inset-0 z-[110] bg-black/95 hidden items-center justify-center p-4 backdrop-blur-md transition-opacity">
+        <button id="close-modal" class="absolute top-4 right-4 text-white hover:text-red-400 bg-slate-800 p-3 rounded-full hover:bg-slate-700 transition-colors shadow-lg z-20 cursor-pointer">
+            <i class="ph ph-x font-bold text-xl"></i>
+        </button>
+        <div id="modal-image-container" class="relative w-full h-full flex items-center justify-center overflow-hidden">
+            <img id="modal-image" class="max-w-full max-h-[90vh] object-contain rounded drop-shadow-2xl cursor-grab active:cursor-grabbing transition-transform duration-75" style="transform: scale(1) translate(0px, 0px);" src="" alt="Ampliación">
+        </div>
+    </div>
+
     <script>
         const fileInput = document.getElementById('file-input');
-        const dropZone = document.getElementById('drop-zone');
-        const uploadPrompt = document.getElementById('upload-prompt');
-        const imagePreview = document.getElementById('image-preview');
+        const queueArea = document.getElementById('queue-area');
+        const imageQueue = document.getElementById('image-queue');
+        const queueCount = document.getElementById('queue-count');
+        const btnProcess = document.getElementById('btn-process');
         const loadingOverlay = document.getElementById('loading-overlay');
 
         const resultsEmpty = document.getElementById('results-empty');
@@ -156,28 +177,178 @@
         const btnExport = document.getElementById('btn-export');
 
         let currentPartsData = [];
+        let selectedFiles = []; // Array to hold { id, file, url } objects
 
         // Handle Image Selection
-        fileInput.addEventListener('change', async (e) => {
+        fileInput.addEventListener('change', (e) => {
             const files = e.target.files;
             if (!files || files.length === 0) return;
 
-            // Show Preview state
-            imagePreview.textContent = files.length === 1 ? '1 Imagen Seleccionada' : `${files.length} Imágenes Seleccionadas`;
-            imagePreview.classList.remove('hidden');
-            uploadPrompt.classList.add('hidden');
+            // Optional: initial alphabetical sort on multiple batch upload
+            const newFiles = Array.from(files).sort((a,b) => a.name.localeCompare(b.name)).map(f => ({
+                id: Math.random().toString(36).substr(2, 9),
+                file: f,
+                url: URL.createObjectURL(f)
+            }));
 
-            // Upload and Process
+            selectedFiles.push(...newFiles);
+            renderQueue();
+            
+            // Clear input so same file can be selected again if needed
+            fileInput.value = '';
+        });
+
+        function renderQueue() {
+            if (selectedFiles.length === 0) {
+                queueArea.classList.add('hidden');
+                queueArea.classList.remove('flex');
+                return;
+            }
+            queueArea.classList.remove('hidden');
+            queueArea.classList.add('flex');
+            queueCount.textContent = `${selectedFiles.length} foto(s)`;
+            imageQueue.innerHTML = '';
+            
+            selectedFiles.forEach((item, index) => {
+                const div = document.createElement('div');
+                // Added dataset to track original item ID during drag-and-drop
+                div.className = 'sortable-item flex items-center gap-3 p-2 bg-slate-800/80 rounded-lg border border-slate-700 hover:border-blue-500/50 transition-colors shadow-sm';
+                div.dataset.id = item.id;
+                
+                div.innerHTML = `
+                    <div class="drag-handle cursor-grab active:cursor-grabbing text-slate-500 hover:text-white px-1">
+                        <i class="ph ph-dots-six-vertical text-2xl"></i>
+                    </div>
+                    <div class="relative group cursor-pointer w-16 h-16 shrink-0" onclick="openModal('${item.url}')">
+                        <img src="${item.url}" class="w-full h-full object-cover rounded bg-slate-900 border border-slate-600">
+                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity">
+                            <i class="ph ph-magnifying-glass-plus text-white text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium truncate text-slate-200" title="${item.file.name}">${item.file.name}</p>
+                        <p class="text-xs text-blue-400 font-semibold mt-0.5 pos-label">Posición: <span class="text-white">${index + 1}</span></p>
+                    </div>
+                    <button onclick="removeFile('${item.id}')" class="p-2 hover:bg-red-500/20 text-red-500 rounded-lg ml-1 transition-colors" title="Eliminar foto">
+                        <i class="ph ph-trash text-lg"></i>
+                    </button>
+                `;
+                imageQueue.appendChild(div);
+            });
+            
+            initSortable();
+        }
+
+        let sortableInstance = null;
+        function initSortable() {
+            if (sortableInstance) {
+                sortableInstance.destroy();
+            }
+            sortableInstance = new Sortable(imageQueue, {
+                animation: 150,
+                handle: '.drag-handle',
+                ghostClass: 'bg-slate-700',
+                onEnd: function (evt) {
+                    // Update the selectedFiles array to match the new DOM order
+                    const newOrderIds = Array.from(imageQueue.children).map(el => el.dataset.id);
+                    selectedFiles = newOrderIds.map(id => selectedFiles.find(item => item.id === id));
+                    
+                    // Update visual position numbers without re-rendering everything
+                    Array.from(imageQueue.children).forEach((el, idx) => {
+                        el.querySelector('.pos-label span').textContent = idx + 1;
+                    });
+                },
+            });
+        }
+
+        window.removeFile = (id) => {
+            selectedFiles = selectedFiles.filter(item => item.id !== id);
+            renderQueue();
+        }
+        // -------- MODAL ZOOM & PAN LOGIC --------
+        const modal = document.getElementById('image-modal');
+        const modalImg = document.getElementById('modal-image');
+        const modalImgContainer = document.getElementById('modal-image-container');
+        
+        let scale = 1;
+        let panning = false;
+        let pointX = 0;
+        let pointY = 0;
+        let startX = 0;
+        let startY = 0;
+
+        function setTransform() {
+            modalImg.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+        }
+
+        window.openModal = (url) => {
+            modalImg.src = url;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Reset zoom and pan
+            scale = 1;
+            pointX = 0;
+            pointY = 0;
+            setTransform();
+        }
+
+        document.getElementById('close-modal').addEventListener('click', () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        });
+
+        modalImgContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY * -0.01;
+            let newScale = scale + delta;
+            
+            // Restrict scale zooming limits (min 1x, max 5x)
+            if (newScale < 1) newScale = 1;
+            if (newScale > 5) newScale = 5;
+            
+            scale = newScale;
+
+            // Snap back to absolute center when fully zoomed out
+            if (scale === 1) {
+                pointX = 0;
+                pointY = 0;
+            }
+            
+            setTransform();
+        });
+
+        modalImgContainer.addEventListener('mousedown', (e) => {
+            if (scale > 1) {
+                e.preventDefault();
+                startX = e.clientX - pointX;
+                startY = e.clientY - pointY;
+                panning = true;
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            panning = false;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!panning || scale === 1) return;
+            e.preventDefault();
+            pointX = e.clientX - startX;
+            pointY = e.clientY - startY;
+            setTransform();
+        });
+        // ----------------------------------------
+
+        btnProcess.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+            const files = selectedFiles.map(i => i.file);
             await processImages(files);
         });
 
-        async function processImages(files) {
-            // UI Loading state
+        async function processImages(filesArray) {
             loadingOverlay.classList.remove('hidden');
+            loadingOverlay.classList.add('flex');
             btnExport.disabled = true;
-
-            // Convert FileList to array and sort alphabetically to ensure deterministic order
-            const filesArray = Array.from(files).sort((a, b) => a.name.localeCompare(b.name));
 
             const formData = new FormData();
             for (let i = 0; i < filesArray.length; i++) {
@@ -185,7 +356,6 @@
             }
 
             try {
-                // Call our FastAPI backend /api/extract
                 const response = await fetch('/api/extract', {
                     method: 'POST',
                     body: formData
@@ -206,6 +376,7 @@
                 alert("Hubo un error al procesar las imágenes. Por favor, intenta de nuevo.");
             } finally {
                 loadingOverlay.classList.add('hidden');
+                loadingOverlay.classList.remove('flex');
             }
         }
 
