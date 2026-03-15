@@ -48,7 +48,7 @@ delgado
             len_c, wid_c = val_bshort, val_blong
             len_g, wid_g = val_gshort, val_glong
 
-        part_data = f"{part.length}X{part.width}X{part.quantity}\n{len_c}X{wid_c}_{len_g}X{wid_g}\n10"
+        part_data = f"{part.length}X{part.width}X{part.quantity}\n{len_c}X{wid_c}_{len_g}X{wid_g}\n00"
         for _ in range(part.quantity):
             part_data += "\n000_0X-1X-1"
         parts_strings.append(part_data)
