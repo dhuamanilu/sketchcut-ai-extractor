@@ -27,9 +27,9 @@ Rules:
      - 'RANURA' or 'CANAL' = 1 surco en el largo -> groove_long="1".
    - Extract edge banding into: `banding_long`, `banding_short`. Valid values: "none", "1_grueso", "2_grueso", "1_delgado", "2_delgado", "mixto". 
      - Use "mixto" ONLY if a single axis has BOTH 1 thick and 1 thin edge (e.g. "1 largo grueso y 1 largo delgado").
-     - CRITICAL: If no edges are mentioned, YOU MUST DEFAULT TO "none". Do NOT hallucinate edge banding.
+     - If no edges are mentioned, YOU MUST DEFAULT TO "none".
    - Extract grooves into: `groove_long`, `groove_short`. Valid values: "none", "1", "2". (If note says '1 surco en el largo', then groove_long="1").
-     - CRITICAL: If no grooves are mentioned, YOU MUST DEFAULT TO "none".
+     - If no grooves are mentioned, YOU MUST DEFAULT TO "none".
 4. AGGREGATION & ORDERING: Aggregate ALL pieces found across ALL provided images into a single flat list sequentially.
 5. Return strictly a flat JSON array, where each element is an object with: length, width, quantity, banding_long, banding_short, groove_long, groove_short. Do not return markdown.
 """
