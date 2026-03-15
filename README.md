@@ -54,7 +54,7 @@ An AI-powered web application designed to automate the extraction of furniture m
 ### Local Web Server (Development)
 You can run the FastAPI server using Uvicorn:
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 Then, open your browser and navigate to `http://localhost:8000`.
 

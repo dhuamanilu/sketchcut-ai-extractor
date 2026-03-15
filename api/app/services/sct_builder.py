@@ -1,12 +1,6 @@
 from datetime import datetime
 from typing import List
-from pydantic import BaseModel
-
-class Part(BaseModel):
-    length: int
-    width: int
-    quantity: int
-    label: str = ""
+from app.models.schemas import Part
 
 def generate_sct(parts: List[Part]) -> str:
     current_date = datetime.now().strftime("%d/%m/%Y")

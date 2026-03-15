@@ -1,12 +1,14 @@
 import pytest
 from fastapi.testclient import TestClient
-from main import app
-from sct_generator import generate_sct, Part
-import json
+
+# Import from the new MVC structure
+from app.main import app
+from app.services.sct_builder import generate_sct
+from app.models.schemas import Part
 
 client = TestClient(app)
 
-# --- Unit Tests for sct_generator.py ---
+# --- Unit Tests for sct_builder.py ---
 
 def test_sct_generation_structure():
     """Test that SCT byte string generation produces the exact expected Sketch Cut Pro format."""
